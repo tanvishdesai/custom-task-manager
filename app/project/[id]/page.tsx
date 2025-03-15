@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import TaskColumn from "@/components/TaskColumn";
 import TaskCard from "@/components/TaskCard";
-import { useAuth } from "@/lib/AuthContext";
+
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const unwrappedParams = React.use(params);
@@ -40,7 +40,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     })
   );
 
-  const { logout } = useAuth();
+  
 
   useEffect(() => {
     const fetchProjectAndTasks = async () => {
@@ -171,30 +171,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-background">
-        <nav className="border-b">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <div className="flex items-center">
-                <h1 className="text-xl font-semibold">Task Manager</h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  onClick={async () => {
-                    try {
-                      await logout();
-                      toast.success("Signed out successfully");
-                    } catch (_error) {
-                      toast.error("Failed to sign out");
-                    }
-                  }}
-                >
-                  Sign Out
-                </Button>
-              </div>
-            </div>
-          </div>
-        </nav>
         <div className="container mx-auto py-8">
           <div className="flex justify-between items-center mb-8">
             <div>
