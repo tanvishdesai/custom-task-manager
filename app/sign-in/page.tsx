@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +16,11 @@ export default function SignIn() {
     const { login, isAuthenticated } = useAuth();
     const router = useRouter();
 
-    if (isAuthenticated) {
-        router.push("/");
-        return null;
-    }
+    useEffect(() => {
+        if (isAuthenticated) {
+            router.push("/");
+        }
+    }, [isAuthenticated, router]);
 
     const handleSignIn = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,6 +36,11 @@ export default function SignIn() {
             setIsLoading(false);
         }
     };
+
+    // Don't render the form if user is authenticated
+    if (isAuthenticated) {
+        return null;
+    }
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">

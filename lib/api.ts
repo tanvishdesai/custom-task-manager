@@ -16,8 +16,6 @@ export const createUserAccount = async (name: string, email: string, password: s
         );
 
         if (!newAccount) throw Error;
-
-        await account.createEmailPasswordSession(email, password);
         
         return newAccount;
     } catch (error) {
