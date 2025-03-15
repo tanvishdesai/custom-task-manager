@@ -46,37 +46,37 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.6 0.24 295); /* Purple color */
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 .dark {
@@ -86,8 +86,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.6 0.24 295); /* Purple color */
+  --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -119,5 +119,115 @@
   }
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
+    /* Prevent layout shift */
+    min-height: 100vh;
+    width: 100vw;
   }
+  
+  /* Improve performance by hinting to browser */
+  .card, .button, .dialog {
+    contain: content;
+  }
+  
+  /* Reduce paint operations */
+  .card, .button, .navbar {
+    will-change: transform;
+  }
+}
+
+/* Add background blob styles with performance optimizations */
+.bg-blob {
+  position: fixed;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.25) 0%, rgba(168, 85, 247, 0.15) 50%, rgba(0, 0, 0, 0) 80%);
+  filter: blur(80px);
+  z-index: -1;
+  animation: float 20s ease-in-out infinite;
+  pointer-events: none;
+  top: 50%;
+  left: 50%;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  /* Performance optimizations */
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+  -webkit-transform: translate3d(-50%, -50%, 0) scale(1);
+  transform-style: preserve-3d;
+  /* Reduces CPU usage */
+  contain: paint;
+}
+
+.bg-blob-1 {
+  opacity: 0.8;
+}
+
+.bg-blob-2 {
+  opacity: 0.6;
+  animation-delay: -5s;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.25) 0%, rgba(76, 29, 149, 0.15) 50%, rgba(0, 0, 0, 0) 80%);
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
+  25% {
+    transform: translate3d(-48%, -53%, 0) scale(1.05);
+  }
+  50% {
+    transform: translate3d(-50%, -47%, 0) scale(0.95);
+  }
+  75% {
+    transform: translate3d(-52%, -53%, 0) scale(1.05);
+  }
+}
+
+/* Add custom quote font with optimized loading */
+@import url('https://fonts.googleapis.com/css2?family=Celandine&display=swap&text="Thereisnonobilityinmediocrity"');
+
+.quote-text {
+  font-family: 'Celandine', serif;
+  line-height: 1.6;
+  font-size: 1.5rem;
+  font-weight: 400;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  letter-spacing: 0.5px;
+}
+
+/* Performance optimizations for transitions and animations */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+  /* Use GPU for smoother animations */
+  will-change: transform, opacity;
+}
+
+/* For project card hover effects */
+@media (prefers-reduced-motion: no-preference) {
+  .card {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow, border-color;
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Optimize layout calculations */
+.grid {
+  contain: layout style;
+}
+
+/* Reduce layout thrashing */
+.h-screen, .min-h-screen {
+  height: 100vh;
+  height: 100dvh;
 }

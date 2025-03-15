@@ -34,13 +34,13 @@ export default function TaskCard({ task, onDelete }: TaskCardProps) {
   const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
       case TaskPriority.HIGH:
-        return "bg-red-100 text-red-800";
+        return "bg-red-500/20 text-red-200";
       case TaskPriority.MEDIUM:
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-500/20 text-yellow-200";
       case TaskPriority.LOW:
-        return "bg-green-100 text-green-800";
+        return "bg-green-500/20 text-green-200";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-muted text-muted-foreground";
     }
   };
 
@@ -58,12 +58,12 @@ export default function TaskCard({ task, onDelete }: TaskCardProps) {
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow"
+      className="cursor-grab active:cursor-grabbing shadow-sm hover:shadow-md transition-shadow border-primary/20"
     >
       <CardHeader className="p-3 pb-0 flex flex-row justify-between items-start">
         <div>
           <h4 className="font-medium text-base">{task.title}</h4>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Created {formatDate(task.createdAt)}
           </p>
         </div>
@@ -72,22 +72,22 @@ export default function TaskCard({ task, onDelete }: TaskCardProps) {
         </span>
       </CardHeader>
       <CardContent className="p-3 pt-2">
-        <p className="text-sm text-gray-600">{task.description || "No description"}</p>
+        <p className="text-sm text-foreground/80">{task.description || "No description"}</p>
         
         {task.dueDate && (
-          <p className="text-xs mt-2 text-gray-500">
+          <p className="text-xs mt-2 text-muted-foreground">
             Due: {new Date(task.dueDate).toLocaleDateString()}
           </p>
         )}
         
         {task.assignees && task.assignees.length > 0 && (
           <div className="mt-2">
-            <p className="text-xs text-gray-500 mb-1">Assignees:</p>
+            <p className="text-xs text-muted-foreground mb-1">Assignees:</p>
             <div className="flex flex-wrap gap-1">
               {task.assignees.map((assignee, index) => (
                 <span
                   key={index}
-                  className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full"
+                  className="bg-primary/10 text-primary-foreground text-xs px-2 py-1 rounded-full"
                 >
                   {assignee}
                 </span>

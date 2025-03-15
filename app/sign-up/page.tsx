@@ -44,8 +44,11 @@ export default function SignUp() {
     }
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-            <Card className="w-full max-w-md">
+        <div className="flex min-h-screen items-center justify-center px-4 py-12 relative overflow-hidden">
+            {/* Background blob */}
+            <div className="bg-blob bg-blob-1"></div>
+            
+            <Card className="w-full max-w-md relative z-10 border border-border shadow-xl">
                 <CardHeader className="space-y-1">
                     <CardTitle className="text-2xl font-bold text-center">Sign up</CardTitle>
                     <CardDescription className="text-center">
@@ -97,12 +100,19 @@ export default function SignUp() {
                     </form>
                     <div className="mt-4 text-center text-sm">
                         Already have an account?{" "}
-                        <Link href="/sign-in" className="text-blue-600 hover:underline">
+                        <Link href="/sign-in" className="text-primary hover:underline">
                             Sign in
                         </Link>
                     </div>
                 </CardContent>
             </Card>
+            
+            {/* Quote at the bottom */}
+            <div className="absolute bottom-8 left-0 right-0 text-center px-4">
+                <div className="quote-text text-sm md:text-base opacity-70">
+                    There is no nobility in mediocrity
+                </div>
+            </div>
         </div>
     );
 } 

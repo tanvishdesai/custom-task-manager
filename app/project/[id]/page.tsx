@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -36,6 +36,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     useSensor(PointerSensor, {
       activationConstraint: {
         distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -170,8 +176,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto py-8">
+      <div className="min-h-screen bg-background relative overflow-hidden">
+        {/* Background blobs for visual effect */}
+        <div className="bg-blob bg-blob-1"></div>
+        <div className="bg-blob bg-blob-2" style={{ left: '30%', animationDelay: '-5s' }}></div>
+        
+        <div className="container mx-auto py-8 relative z-10">
           <div className="flex justify-between items-center mb-8">
             <div>
               <Button variant="outline" onClick={() => router.push("/")} className="mb-4">

@@ -35,13 +35,13 @@ const Navbar = () => {
 
   return (
     <div className="fixed top-4 left-0 right-0 z-50 mx-auto max-w-7xl px-4">
-      <nav className="backdrop-blur-md bg-white/70 dark:bg-gray-900/70 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm px-4 sm:px-6 py-3 transition-all duration-200 hover:bg-white/80 dark:hover:bg-gray-900/80">
+      <nav className="backdrop-blur-md bg-background/70 rounded-full border border-border shadow-sm px-4 sm:px-6 py-3 transition-all duration-200">
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <svg
-                className="h-8 w-8 text-purple-600"
+                className="h-8 w-8 text-primary"
                 viewBox="0 0 24 24"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -49,81 +49,75 @@ const Navbar = () => {
                 <rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" />
                 <rect x="8" y="8" width="8" height="8" rx="1" fill="white" />
               </svg>
-              <span className="ml-2 text-xl font-semibold">Taskify</span>
+              <span className="ml-2 text-xl font-semibold">TaskMaster</span>
             </Link>
+            
+            {/* Added quote text with proper styling for visibility */}
+            <div className="ml-6 hidden md:block">
+              <span className="text-sm text-foreground/70 italic font-light">
+                There is no nobility in mediocrity
+              </span>
+            </div>
           </div>
 
-          {/* Tagline */}
-          <div className="hidden md:block">
-            <p className="text-sm font-medium italic text-gray-600 dark:text-gray-300">
-              &quot;There is no nobility in mediocrity&quot;
-            </p>
-          </div>
-
-          {/* User info and sign out - Desktop */}
-          <div className="hidden sm:flex items-center space-x-4">
-            {user && (
-              <>
-                <div className="flex items-center">
-                  <Avatar className="h-8 w-8 mr-2">
-                    <AvatarFallback className="bg-purple-100 text-purple-600">
-                      {user.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">
-                    {user.name}
-                  </span>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  Sign Out
-                </Button>
-              </>
-            )}
-            {!user && (
-              <Link href="/sign-in">
-                <Button variant="outline" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-            )}
-          </div>
-
-          {/* Mobile menu */}
+          {/* Mobile Menu Toggle */}
           <div className="sm:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <Menu className="h-5 w-5" />
-                  <span className="sr-only">Open menu</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {user ? (
                   <>
-                    <DropdownMenuItem disabled className="flex items-center">
-                      <Avatar className="h-6 w-6 mr-2">
-                        <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
-                          {user.name.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">{user.name}</span>
+                    <DropdownMenuItem asChild>
+                      <Link href="/">Dashboard</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut}>
+                    <DropdownMenuItem asChild onClick={handleSignOut}>
                       Sign Out
                     </DropdownMenuItem>
                   </>
                 ) : (
-                  <DropdownMenuItem asChild>
-                    <Link href="/sign-in">Sign In</Link>
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/sign-in">Sign In</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/sign-up">Sign Up</Link>
+                    </DropdownMenuItem>
+                  </>
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+          </div>
+
+          {/* Desktop Menu */}
+          <div className="hidden sm:flex items-center space-x-4">
+            {user ? (
+              <>
+                <div className="flex items-center">
+                  <Avatar className="h-8 w-8 bg-primary/20">
+                    <AvatarFallback className="text-primary">
+                      {user.name.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="ml-2 font-medium">{user.name}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/sign-in">Sign In</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link href="/sign-up">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </nav>
