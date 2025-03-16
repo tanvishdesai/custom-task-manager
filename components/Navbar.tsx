@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -40,15 +41,13 @@ const Navbar = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
-              <svg
-                className="h-8 w-8 text-primary"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <rect x="4" y="4" width="16" height="16" rx="2" fill="currentColor" />
-                <rect x="8" y="8" width="8" height="8" rx="1" fill="white" />
-              </svg>
+              <Image
+                src="/android-chrome-192x192.png"
+                alt="TaskMaster Logo"
+                width={32}
+                height={32}
+                className="h-8 w-8"
+              />
               <span className="ml-2 text-xl font-semibold">TaskMaster</span>
             </Link>
             
