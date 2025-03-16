@@ -19,6 +19,7 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     register: (name: string, email: string, password: string) => Promise<void>;
+    isVerifying: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
     login: async () => {},
     logout: async () => {},
     register: async () => {},
+    isVerifying: false,
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -36,6 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<UserType | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isVerifying, setIsVerifying] = useState<boolean>(false);
     const router = useRouter();
 
     useEffect(() => {
@@ -48,9 +51,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 if (currentAccount) {
                     setUser(currentAccount);
                     setIsAuthenticated(true);
+                } else {
+                    setUser(null);
+                    setIsAuthenticated(false);
                 }
-            } catch (error) {
-                console.error("Auth check error:", error);
+            } catch {
+                // We won't log any errors here since getCurrentUser already handles that
+                setUser(null);
+                setIsAuthenticated(false);
             } finally {
                 setIsLoading(false);
             }
@@ -60,6 +68,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const login = async (email: string, password: string) => {
+        setIsVerifying(true);
         try {
             setIsLoading(true);
             const session = await signIn(email, password);
@@ -75,6 +84,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             throw error;
         } finally {
             setIsLoading(false);
+            setIsVerifying(false);
         }
     };
 
@@ -95,7 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const register = async (name: string, email: string, password: string) => {
         try {
             setIsLoading(true);
-            const newUser = await createUserAccount(name, email, password);
+            const newUser: UserType = await createUserAccount(name, email, password);
             
             if (newUser) {
                 await login(email, password);
@@ -114,7 +124,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isAuthenticated,
         login,
         logout,
-        register
+        register,
+        isVerifying
     };
 
     return (

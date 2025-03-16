@@ -8,8 +8,11 @@ const tasksCollectionId = process.env.NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION_ID |
 // Auth API
 export const createUserAccount = async (name: string, email: string, password: string) => {
     try {
+        // Generate a valid userId that meets Appwrite's requirements
+        const userId = ID.unique();
+        
         const newAccount = await account.create(
-            ID.unique(),
+            userId,
             email,
             password,
             name
@@ -17,10 +20,78 @@ export const createUserAccount = async (name: string, email: string, password: s
 
         if (!newAccount) throw Error;
         
+        // Don't create a session immediately, wait for email verification
         return newAccount;
     } catch (error) {
         console.error("Error creating user account:", error);
         throw error;
+    }
+};
+
+// Create verification with Appwrite
+export const createEmailVerification = async () => {
+    try {
+        // Use Appwrite's built-in email verification
+        const promise = await account.createVerification(
+            `${window.location.origin}/verify-email`
+        );
+        return promise;
+    } catch (error) {
+        console.error("Error creating email verification:", error);
+        throw error;
+    }
+};
+
+// Create Magic URL token for verification and login
+export const createMagicURLToken = async (email: string) => {
+    try {
+        // Use Appwrite's Magic URL token for both verification and authentication
+        const result = await account.createMagicURLToken(
+            ID.unique(),
+            email,
+            `${window.location.origin}/verify-email`
+        );
+        return result;
+    } catch (error) {
+        console.error("Error creating Magic URL token:", error);
+        throw error;
+    }
+};
+
+// Store pending user in local storage
+export const storePendingUser = (name: string, email: string, password: string) => {
+    try {
+        // Using local storage to temporarily store user details
+        // In production, consider more secure options or encrypt the data
+        const pendingUser = { name, email, password };
+        localStorage.setItem('pendingUser', JSON.stringify(pendingUser));
+        return true;
+    } catch (error) {
+        console.error("Error storing pending user:", error);
+        return false;
+    }
+};
+
+// Get pending user from local storage
+export const getPendingUser = () => {
+    try {
+        const pendingUser = localStorage.getItem('pendingUser');
+        if (!pendingUser) return null;
+        return JSON.parse(pendingUser);
+    } catch (error) {
+        console.error("Error getting pending user:", error);
+        return null;
+    }
+};
+
+// Clear pending user from local storage
+export const clearPendingUser = () => {
+    try {
+        localStorage.removeItem('pendingUser');
+        return true;
+    } catch (error) {
+        console.error("Error clearing pending user:", error);
+        return false;
     }
 };
 
@@ -51,7 +122,12 @@ export const getCurrentUser = async () => {
         
         return currentAccount;
     } catch (error) {
-        console.error("Error getting current user:", error);
+        // Don't log any errors for 401 Unauthorized
+        if (error instanceof Error && 
+            !error.toString().includes('401') && 
+            !error.toString().includes('Unauthorized')) {
+            console.error("Error getting current user:", error);
+        }
         return null;
     }
 };
