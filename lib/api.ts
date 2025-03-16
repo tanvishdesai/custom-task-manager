@@ -1,9 +1,11 @@
 import { account, databases, ID, Query } from "./appwrite";
-import { Project, Task, TaskStatus } from "./types";
+import { Notification, NotificationType, Project, Task, TaskStatus } from "./types";
 
 const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID || '';
 const projectsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_PROJECTS_COLLECTION_ID || '';
 const tasksCollectionId = process.env.NEXT_PUBLIC_APPWRITE_TASKS_COLLECTION_ID || '';
+const usersCollectionId = process.env.NEXT_PUBLIC_APPWRITE_USERS_COLLECTION_ID || '';
+const notificationsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_NOTIFICATIONS_COLLECTION_ID || '';
 
 // Auth API
 export const createUserAccount = async (name: string, email: string, password: string) => {
@@ -19,6 +21,23 @@ export const createUserAccount = async (name: string, email: string, password: s
         );
 
         if (!newAccount) throw Error;
+        
+        // Also add the user to the Users collection for mentions/assignments
+        try {
+            await databases.createDocument(
+                databaseId,
+                usersCollectionId,
+                userId, // Use the same ID for consistency
+                {
+                    name,
+                    email
+                }
+            );
+        } catch (error) {
+            console.error("Error adding user to Users collection:", error);
+            // We don't throw here to not disrupt the account creation flow
+            // but this should be handled in a production app
+        }
         
         // Don't create a session immediately, wait for email verification
         return newAccount;
@@ -239,6 +258,52 @@ export const createTask = async (task: Omit<Task, '$id' | 'createdAt' | 'updated
             }
         );
         
+        // Create notifications for all assignees
+        if (task.assignees && task.assignees.length > 0) {
+            // Get project details for the notification message
+            const project = await databases.getDocument(
+                databaseId,
+                projectsCollectionId,
+                task.projectId
+            );
+            
+            // Get user information to find user IDs based on email
+            const users = await databases.listDocuments(
+                databaseId,
+                usersCollectionId
+            );
+            
+            const assigneeEmails = task.assignees;
+            const userMap = users.documents.reduce((acc, user) => {
+                acc[user.email] = user.$id;
+                return acc;
+            }, {} as Record<string, string>);
+            
+            // Create notifications for each assignee
+            for (const email of assigneeEmails) {
+                const userId = userMap[email];
+                
+                if (userId) {
+                    await createNotification({
+                        userId,
+                        type: NotificationType.TASK_ASSIGNED,
+                        title: 'New Task Assigned',
+                        message: `You have been assigned to "${task.title}" in project "${project.name}"`,
+                        taskId: newTask.$id,
+                        projectId: task.projectId,
+                        isRead: false
+                    });
+                }
+            }
+            
+            // Send email notifications if needed
+            await sendTaskAssignmentEmail(
+                newTask.$id,
+                task.projectId,
+                assigneeEmails
+            );
+        }
+        
         return newTask;
     } catch (error) {
         console.error("Error creating task:", error);
@@ -294,5 +359,173 @@ export const deleteTask = async (taskId: string) => {
     } catch (error) {
         console.error("Error deleting task:", error);
         throw error;
+    }
+};
+
+export const getAllUsers = async () => {
+    try {
+        // Fetch all users from the users collection
+        const users = await databases.listDocuments(
+            databaseId,
+            usersCollectionId
+        );
+        
+        return users.documents;
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        return [];
+    }
+};
+
+export const sendTaskAssignmentEmail = async (taskId: string, projectId: string, assigneeEmails: string[]) => {
+    try {
+        // Get task and project details
+        const task = await databases.getDocument(databaseId, tasksCollectionId, taskId);
+        const project = await databases.getDocument(databaseId, projectsCollectionId, projectId);
+        
+        // In a real application, you would integrate with an email service here
+        // For now, we'll just log the information
+        console.log(`Email notification would be sent to: ${assigneeEmails.join(', ')}`);
+        console.log(`Task "${task.title}" in project "${project.name}" has been assigned to you.`);
+        
+        return true;
+    } catch (error) {
+        console.error("Error sending assignment emails:", error);
+        return false;
+    }
+};
+
+// Notifications API
+export const createNotification = async (notification: Omit<Notification, '$id' | 'createdAt'>) => {
+    try {
+        const now = new Date().toISOString();
+        
+        // Create notification with all required fields
+        const newNotification = await databases.createDocument(
+            databaseId,
+            notificationsCollectionId,
+            ID.unique(),
+            {
+                userId: notification.userId,
+                type: notification.type, 
+                title: notification.title,
+                message: notification.message,
+                taskId: notification.taskId,
+                projectId: notification.projectId,
+                isRead: notification.isRead,
+                createdAt: now
+            }
+        );
+        
+        return newNotification;
+    } catch (error) {
+        console.error("Error creating notification:", error);
+        return null;
+    }
+};
+
+export const getUserNotifications = async (userId: string) => {
+    try {
+        const notifications = await databases.listDocuments(
+            databaseId,
+            notificationsCollectionId,
+            [
+                Query.equal('userId', userId),
+                Query.orderDesc('createdAt')
+            ]
+        );
+        
+        return notifications.documents;
+    } catch (error) {
+        console.error("Error getting user notifications:", error);
+        return [];
+    }
+};
+
+export const markNotificationAsRead = async (notificationId: string) => {
+    try {
+        const updatedNotification = await databases.updateDocument(
+            databaseId,
+            notificationsCollectionId,
+            notificationId,
+            {
+                isRead: true
+            }
+        );
+        
+        return updatedNotification;
+    } catch (error) {
+        console.error("Error marking notification as read:", error);
+        return null;
+    }
+};
+
+export const markAllNotificationsAsRead = async (userId: string) => {
+    try {
+        // Get all unread notifications
+        const notifications = await databases.listDocuments(
+            databaseId,
+            notificationsCollectionId,
+            [
+                Query.equal('userId', userId),
+                Query.equal('isRead', false)
+            ]
+        );
+        
+        // Mark each notification as read
+        const updatePromises = notifications.documents.map(notification => 
+            databases.updateDocument(
+                databaseId,
+                notificationsCollectionId,
+                notification.$id,
+                { isRead: true }
+            )
+        );
+        
+        await Promise.all(updatePromises);
+        
+        return true;
+    } catch (error) {
+        console.error("Error marking all notifications as read:", error);
+        return false;
+    }
+};
+
+// Function to get projects where the user is assigned tasks
+export const getProjectsWithAssignedTasks = async (userEmail: string) => {
+    try {
+        // Get all tasks assigned to the user
+        const tasks = await databases.listDocuments(
+            databaseId,
+            tasksCollectionId,
+            [Query.search('assignees', userEmail)]
+        );
+        
+        if (tasks.documents.length === 0) {
+            return [];
+        }
+        
+        // Extract unique project IDs
+        const projectIds = [...new Set(tasks.documents.map(task => task.projectId))];
+        
+        // Fetch projects by IDs
+        const projects = [];
+        for (const projectId of projectIds) {
+            try {
+                const project = await databases.getDocument(
+                    databaseId,
+                    projectsCollectionId,
+                    projectId
+                );
+                projects.push(project);
+            } catch (error) {
+                console.error(`Error fetching project with ID ${projectId}:`, error);
+            }
+        }
+        
+        return projects;
+    } catch (error) {
+        console.error("Error getting projects with assigned tasks:", error);
+        return [];
     }
 }; 

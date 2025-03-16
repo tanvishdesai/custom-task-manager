@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NotificationDropdown from "./NotificationDropdown";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -59,43 +60,12 @@ const Navbar = () => {
             </span>
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <div className="sm:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {user ? (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/">Dashboard</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild onClick={handleSignOut}>
-                      Sign Out
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <DropdownMenuItem asChild>
-                      <Link href="/sign-in">Sign In</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/sign-up">Sign Up</Link>
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Desktop Menu */}
-          <div className="hidden sm:flex items-center space-x-4">
+          {/* Right side with user menu and notifications */}
+          <div className="flex items-center space-x-2">
             {user ? (
               <>
-                <div className="flex items-center">
+                <NotificationDropdown />
+                <div className="hidden md:flex items-center">
                   <Avatar className="h-8 w-8 bg-primary/20">
                     <AvatarFallback className="text-primary">
                       {user.name.substring(0, 2).toUpperCase()}
@@ -103,18 +73,66 @@ const Navbar = () => {
                   </Avatar>
                   <span className="ml-2 font-medium">{user.name}</span>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleSignOut}>
+                <Button variant="outline" size="sm" onClick={handleSignOut} className="hidden md:inline-flex">
                   Sign Out
                 </Button>
+                
+                {/* Mobile Menu */}
+                <div className="md:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6 bg-primary/20">
+                          <AvatarFallback className="text-primary text-xs">
+                            {user.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>{user.name}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/">Dashboard</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleSignOut}>
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </>
             ) : (
               <>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/sign-in">Sign In</Link>
-                </Button>
-                <Button size="sm" asChild>
-                  <Link href="/sign-up">Sign Up</Link>
-                </Button>
+                <div className="hidden md:flex items-center space-x-2">
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/sign-in">Sign In</Link>
+                  </Button>
+                  <Button size="sm" asChild>
+                    <Link href="/sign-up">Sign Up</Link>
+                  </Button>
+                </div>
+                
+                {/* Mobile Menu for signed out state */}
+                <div className="md:hidden">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <Menu className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href="/sign-in">Sign In</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/sign-up">Sign Up</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </>
             )}
           </div>

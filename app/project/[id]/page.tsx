@@ -6,8 +6,8 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, T
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createTask, deleteTask, getProject, getProjectTasks, updateTaskStatus } from "@/lib/api";
-import { Project, Task, TaskPriority, TaskStatus } from "@/lib/types";
+import { createTask, deleteTask, getAllUsers, getProject, getProjectTasks, sendTaskAssignmentEmail, updateTaskStatus } from "@/lib/api";
+import { Project, Task, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { toast } from "sonner";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import TaskColumn from "@/components/TaskColumn";
@@ -18,10 +18,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const unwrappedParams = React.use(params);
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [currentAssigneeIndex, setCurrentAssigneeIndex] = useState(0);
+  const [_dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -54,9 +59,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         setIsLoading(true);
         const projectData = await getProject(unwrappedParams.id);
         const tasksData = await getProjectTasks(unwrappedParams.id);
+        const usersData = await getAllUsers();
         
         setProject(projectData as unknown as Project);
         setTasks(tasksData as unknown as Task[]);
+        setUsers(usersData as unknown as User[]);
       } catch (error) {
         console.error("Error fetching project data:", error);
         toast.error("Failed to load project data");
@@ -88,6 +95,20 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         status: TaskStatus.NOT_STARTED,
         projectId: unwrappedParams.id,
       });
+      
+      // Get emails for notification
+      const assigneeEmails = newTask.assignees
+        .filter(a => a.includes('@'))
+        .map(a => a.trim());
+      
+      if (assigneeEmails.length > 0 && createdTask) {
+        // Send email notifications
+        await sendTaskAssignmentEmail(
+          (createdTask as unknown as Task).$id as string, 
+          unwrappedParams.id, 
+          assigneeEmails
+        );
+      }
       
       setTasks((prev) => [...prev, createdTask as unknown as Task]);
       setNewTask({
@@ -164,6 +185,55 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const getTasksByStatus = (status: TaskStatus) => {
     return tasks.filter((task) => task.status === status);
+  };
+
+  const handleAssigneeInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const newValue = e.target.value;
+    const newAssignees = [...newTask.assignees];
+    newAssignees[index] = newValue;
+    setNewTask({ ...newTask, assignees: newAssignees });
+    
+    const lastChar = newValue.slice(-1);
+    const lastAtIndex = newValue.lastIndexOf('@');
+    
+    if (lastChar === '@') {
+      // Position the dropdown near the @ symbol
+      const rect = e.target.getBoundingClientRect();
+      setDropdownPosition({ 
+        top: rect.bottom, 
+        left: rect.left + 8 + (lastAtIndex * 8) // Approximate position
+      });
+      
+      setCurrentAssigneeIndex(index);
+      setFilteredUsers(users);
+      setShowUserDropdown(true);
+    } else if (lastAtIndex !== -1) {
+      // Filter users based on what's typed after @
+      const searchTerm = newValue.slice(lastAtIndex + 1).toLowerCase();
+      const filtered = users.filter(user => 
+        user.name.toLowerCase().includes(searchTerm) || 
+        user.email.toLowerCase().includes(searchTerm)
+      );
+      
+      setFilteredUsers(filtered);
+      setCurrentAssigneeIndex(index);
+      setShowUserDropdown(filtered.length > 0);
+    } else if (showUserDropdown && !newValue.includes('@')) {
+      setShowUserDropdown(false);
+    }
+  };
+  
+  const handleSelectUser = (user: User) => {
+    const newAssignees = [...newTask.assignees];
+    // Replace the text after @ with the selected user's email
+    const currentValue = newAssignees[currentAssigneeIndex];
+    const atIndex = currentValue.lastIndexOf('@');
+    
+    if (atIndex !== -1) {
+      newAssignees[currentAssigneeIndex] = currentValue.substring(0, atIndex) + user.email;
+      setNewTask({ ...newTask, assignees: newAssignees });
+      setShowUserDropdown(false);
+    }
   };
 
   if (isLoading) {
@@ -254,18 +324,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Assignees
+                        Assignees (Type @ to mention users)
                       </label>
                       {newTask.assignees.map((assignee, index) => (
-                        <div key={index} className="flex gap-2">
+                        <div key={index} className="flex gap-2 relative">
                           <Input
                             value={assignee}
-                            onChange={(e) => {
-                              const newAssignees = [...newTask.assignees];
-                              newAssignees[index] = e.target.value;
-                              setNewTask({ ...newTask, assignees: newAssignees });
-                            }}
-                            placeholder="Enter assignee name"
+                            onChange={(e) => handleAssigneeInputChange(e, index)}
+                            placeholder="Type @ to mention users"
                           />
                           {index === newTask.assignees.length - 1 ? (
                             <Button
@@ -287,6 +353,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                             >
                               -
                             </Button>
+                          )}
+                          
+                          {showUserDropdown && currentAssigneeIndex === index && (
+                            <div 
+                              className="absolute z-50 mt-2 w-full max-h-48 overflow-y-auto bg-background border rounded-md shadow-lg"
+                              style={{ top: "100%", left: 0 }}
+                            >
+                              {filteredUsers.length > 0 ? (
+                                filteredUsers.map((user) => (
+                                  <div
+                                    key={user.$id}
+                                    className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
+                                    onClick={() => handleSelectUser(user)}
+                                  >
+                                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-sm">
+                                      {user.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                      <div className="text-sm font-medium">{user.name}</div>
+                                      <div className="text-xs text-muted-foreground">{user.email}</div>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="px-4 py-2 text-muted-foreground">No users found</div>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))}
