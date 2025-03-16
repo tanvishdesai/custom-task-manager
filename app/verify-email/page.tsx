@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { account } from "@/lib/appwrite";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export default function VerifyEmail() {
+function VerifyEmailContent() {
     const [_isVerifying, setIsVerifying] = useState<boolean>(true);
     const [verificationStatus, setVerificationStatus] = useState<"verifying" | "success" | "error">("verifying");
     const router = useRouter();
@@ -121,5 +121,25 @@ export default function VerifyEmail() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function VerifyEmail() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle className="text-2xl font-bold text-center">Email Verification</CardTitle>
+                        <CardDescription className="text-center">Loading verification page...</CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <p>Please wait while we load the verification page...</p>
+                    </CardContent>
+                </Card>
+            </div>
+        }>
+            <VerifyEmailContent />
+        </Suspense>
     );
 } 
