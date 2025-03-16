@@ -6,12 +6,13 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, T
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { createTask, deleteTask, getAllUsers, getProject, getProjectTasks, sendTaskAssignmentEmail, updateTaskStatus } from "@/lib/api";
+import { createTask, deleteTask, editTask, getAllUsers, getProject, getProjectTasks, sendTaskAssignmentEmail, updateTaskStatus } from "@/lib/api";
 import { Project, Task, TaskPriority, TaskStatus, User } from "@/lib/types";
 import { toast } from "sonner";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import TaskColumn from "@/components/TaskColumn";
 import TaskCard from "@/components/TaskCard";
+import { useAuth } from "@/lib/AuthContext";
 
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,6 +28,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [currentAssigneeIndex, setCurrentAssigneeIndex] = useState(0);
   const [_dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [isOwner, setIsOwner] = useState(false);
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
@@ -36,6 +38,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   });
   
   const router = useRouter();
+  const { user } = useAuth();
   
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -64,6 +67,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         setProject(projectData as unknown as Project);
         setTasks(tasksData as unknown as Task[]);
         setUsers(usersData as unknown as User[]);
+        
+        // Determine if the current user is the owner of the project
+        if (user && (projectData as unknown as Project).userId === user.$id) {
+          setIsOwner(true);
+        } else {
+          setIsOwner(false);
+        }
       } catch (error) {
         console.error("Error fetching project data:", error);
         toast.error("Failed to load project data");
@@ -74,7 +84,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     };
 
     fetchProjectAndTasks();
-  }, [unwrappedParams.id, router]);
+  }, [unwrappedParams.id, router, user]);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,6 +140,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleDeleteTask = async (taskId: string) => {
     try {
+      // Only allow task deletion if the user is the project owner
+      if (!isOwner) {
+        toast.error("You don't have permission to delete this task");
+        return;
+      }
+      
       await deleteTask(taskId);
       setTasks((prev) => prev.filter((task) => task.$id !== taskId));
       toast.success("Task deleted successfully");
@@ -162,6 +178,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       
       if (taskToUpdate && taskToUpdate.status !== overContainerId) {
         try {
+          // Only allow task status updates if the user is the project owner
+          if (!isOwner) {
+            toast.error("You don't have permission to update task status");
+            return;
+          }
+          
           const _updatedTask = await updateTaskStatus(activeTaskId, overContainerId);
           
           setTasks((prev) =>
@@ -236,10 +258,35 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const handleEditTask = async (taskId: string, updatedTask: Partial<Task>) => {
+    try {
+      // Only allow task editing if the user is the project owner
+      if (!isOwner) {
+        toast.error("You don't have permission to edit this task");
+        return;
+      }
+      
+      // Call the API to update the task in the database
+      await editTask(taskId, updatedTask);
+      
+      // Update the local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.$id === taskId ? { ...task, ...updatedTask } : task
+        )
+      );
+      
+      toast.success("Task updated successfully");
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Failed to update task");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="h-16 w-16 animate-spin rounded-full border-t-4 border-b-4 border-blue-500"></div>
+        <div className="h-16 w-16 animate-spin rounded-full border-t-4 border-b-4 border-primary"></div>
       </div>
     );
   }
@@ -251,154 +298,157 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         <div className="bg-blob bg-blob-1"></div>
         <div className="bg-blob bg-blob-2" style={{ left: '30%', animationDelay: '-5s' }}></div>
         
-        <div className="container mx-auto py-8 relative z-10">
+        <div className="container mx-auto px-4 py-8 relative z-10">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <Button variant="outline" onClick={() => router.push("/")} className="mb-4">
+              <Button variant="outline" onClick={() => router.push("/")} className="mb-4 border-gray-700 hover:bg-primary/20 text-white">
                 ← Back to Projects
               </Button>
-              <h1 className="text-3xl font-bold">{project?.name}</h1>
-              <p className="text-gray-600 mt-1">{project?.description}</p>
+              <h1 className="text-3xl font-bold text-white">{project?.name}</h1>
+              <p className="text-gray-300 mt-1">{project?.description}</p>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>Add New Task</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Create New Task</DialogTitle>
-                  <DialogDescription>
-                    Add a new task to your project
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleCreateTask}>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label htmlFor="title" className="text-sm font-medium">
-                        Task Title
-                      </label>
-                      <Input
-                        id="title"
-                        value={newTask.title}
-                        onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                        placeholder="Enter task title"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="description" className="text-sm font-medium">
-                        Description
-                      </label>
-                      <Input
-                        id="description"
-                        value={newTask.description}
-                        onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                        placeholder="Enter task description"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="dueDate" className="text-sm font-medium">
-                        Due Date
-                      </label>
-                      <Input
-                        id="dueDate"
-                        type="date"
-                        value={newTask.dueDate}
-                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="priority" className="text-sm font-medium">
-                        Priority
-                      </label>
-                      <select
-                        id="priority"
-                        value={newTask.priority}
-                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as TaskPriority })}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      >
-                        <option value={TaskPriority.LOW}>Low</option>
-                        <option value={TaskPriority.MEDIUM}>Medium</option>
-                        <option value={TaskPriority.HIGH}>High</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">
-                        Assignees (Type @ to mention users)
-                      </label>
-                      {newTask.assignees.map((assignee, index) => (
-                        <div key={index} className="flex gap-2 relative">
-                          <Input
-                            value={assignee}
-                            onChange={(e) => handleAssigneeInputChange(e, index)}
-                            placeholder="Type @ to mention users"
-                          />
-                          {index === newTask.assignees.length - 1 ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => setNewTask({ ...newTask, assignees: [...newTask.assignees, ""] })}
-                            >
-                              +
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                const newAssignees = [...newTask.assignees];
-                                newAssignees.splice(index, 1);
-                                setNewTask({ ...newTask, assignees: newAssignees });
-                              }}
-                            >
-                              -
-                            </Button>
-                          )}
-                          
-                          {showUserDropdown && currentAssigneeIndex === index && (
-                            <div 
-                              className="absolute z-50 mt-2 w-full max-h-48 overflow-y-auto bg-background border rounded-md shadow-lg"
-                              style={{ top: "100%", left: 0 }}
-                            >
-                              {filteredUsers.length > 0 ? (
-                                filteredUsers.map((user) => (
-                                  <div
-                                    key={user.$id}
-                                    className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
-                                    onClick={() => handleSelectUser(user)}
-                                  >
-                                    <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-sm">
-                                      {user.name.charAt(0)}
+            
+            {isOwner && (
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>Add New Task</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                  <DialogHeader>
+                    <DialogTitle>Create New Task</DialogTitle>
+                    <DialogDescription>
+                      Add a new task to your project
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateTask}>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <label htmlFor="title" className="text-sm font-medium">
+                          Task Title
+                        </label>
+                        <Input
+                          id="title"
+                          value={newTask.title}
+                          onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                          placeholder="Enter task title"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="description" className="text-sm font-medium">
+                          Description
+                        </label>
+                        <Input
+                          id="description"
+                          value={newTask.description}
+                          onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                          placeholder="Enter task description"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="dueDate" className="text-sm font-medium">
+                          Due Date
+                        </label>
+                        <Input
+                          id="dueDate"
+                          type="date"
+                          value={newTask.dueDate}
+                          onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="priority" className="text-sm font-medium">
+                          Priority
+                        </label>
+                        <select
+                          id="priority"
+                          value={newTask.priority}
+                          onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as TaskPriority })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value={TaskPriority.LOW}>Low</option>
+                          <option value={TaskPriority.MEDIUM}>Medium</option>
+                          <option value={TaskPriority.HIGH}>High</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          Assignees (Type @ to mention users)
+                        </label>
+                        {newTask.assignees.map((assignee, index) => (
+                          <div key={index} className="flex gap-2 relative">
+                            <Input
+                              value={assignee}
+                              onChange={(e) => handleAssigneeInputChange(e, index)}
+                              placeholder="Type @ to mention users"
+                            />
+                            {index === newTask.assignees.length - 1 ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setNewTask({ ...newTask, assignees: [...newTask.assignees, ""] })}
+                              >
+                                +
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  const newAssignees = [...newTask.assignees];
+                                  newAssignees.splice(index, 1);
+                                  setNewTask({ ...newTask, assignees: newAssignees });
+                                }}
+                              >
+                                -
+                              </Button>
+                            )}
+                            
+                            {showUserDropdown && currentAssigneeIndex === index && (
+                              <div 
+                                className="absolute z-50 mt-2 w-full max-h-48 overflow-y-auto bg-background border rounded-md shadow-lg"
+                                style={{ top: "100%", left: 0 }}
+                              >
+                                {filteredUsers.length > 0 ? (
+                                  filteredUsers.map((user) => (
+                                    <div
+                                      key={user.$id}
+                                      className="px-4 py-2 hover:bg-muted cursor-pointer flex items-center gap-2"
+                                      onClick={() => handleSelectUser(user)}
+                                    >
+                                      <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center text-sm">
+                                        {user.name.charAt(0)}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium">{user.name}</div>
+                                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                                      </div>
                                     </div>
-                                    <div>
-                                      <div className="text-sm font-medium">{user.name}</div>
-                                      <div className="text-xs text-muted-foreground">{user.email}</div>
-                                    </div>
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="px-4 py-2 text-muted-foreground">No users found</div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                                  ))
+                                ) : (
+                                  <div className="px-4 py-2 text-muted-foreground">No users found</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" disabled={isCreating}>
-                      {isCreating ? "Creating..." : "Create Task"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                    <DialogFooter>
+                      <Button type="submit" disabled={isCreating}>
+                        {isCreating ? "Creating..." : "Create Task"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
 
           <DndContext
             sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
+            onDragStart={isOwner ? handleDragStart : undefined}
+            onDragEnd={isOwner ? handleDragEnd : undefined}
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <TaskColumn 
@@ -406,25 +456,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 tasks={getTasksByStatus(TaskStatus.NOT_STARTED)} 
                 status={TaskStatus.NOT_STARTED}
                 onDeleteTask={handleDeleteTask}
+                onEditTask={handleEditTask}
+                isOwner={isOwner}
               />
               <TaskColumn 
                 title="Ongoing" 
                 tasks={getTasksByStatus(TaskStatus.ONGOING)} 
                 status={TaskStatus.ONGOING}
                 onDeleteTask={handleDeleteTask}
+                onEditTask={handleEditTask}
+                isOwner={isOwner}
               />
               <TaskColumn 
                 title="Completed" 
                 tasks={getTasksByStatus(TaskStatus.COMPLETED)} 
                 status={TaskStatus.COMPLETED}
                 onDeleteTask={handleDeleteTask}
+                onEditTask={handleEditTask}
+                isOwner={isOwner}
               />
             </div>
             
             <DragOverlay>
               {activeTask ? (
                 <div className="rotate-3 scale-105">
-                  <TaskCard task={activeTask} onDelete={() => {}} />
+                  <TaskCard task={activeTask} onDelete={() => {}} isOwner={isOwner} />
                 </div>
               ) : null}
             </DragOverlay>

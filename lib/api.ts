@@ -528,4 +528,21 @@ export const getProjectsWithAssignedTasks = async (userEmail: string) => {
         console.error("Error getting projects with assigned tasks:", error);
         return [];
     }
+};
+
+// Function to update a task
+export const editTask = async (taskId: string, updatedTask: Partial<Task>) => {
+  try {
+    const response = await databases.updateDocument(
+      databaseId,
+      tasksCollectionId,
+      taskId,
+      updatedTask
+    );
+    
+    return response;
+  } catch (error) {
+    console.error("Error updating task:", error);
+    throw error;
+  }
 }; 

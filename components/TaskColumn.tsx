@@ -10,9 +10,18 @@ interface TaskColumnProps {
   tasks: Task[];
   status: TaskStatus;
   onDeleteTask: (taskId: string) => void;
+  onEditTask?: (taskId: string, updatedTask: Partial<Task>) => void;
+  isOwner?: boolean;
 }
 
-export default function TaskColumn({ title, tasks, status, onDeleteTask }: TaskColumnProps) {
+export default function TaskColumn({
+  title,
+  tasks,
+  status,
+  onDeleteTask,
+  onEditTask,
+  isOwner = true
+}: TaskColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
   });
@@ -22,27 +31,39 @@ export default function TaskColumn({ title, tasks, status, onDeleteTask }: TaskC
   return (
     <div
       ref={setNodeRef}
-      className={`bg-card rounded-lg p-4 h-[calc(100vh-200px)] overflow-y-auto ${
-        isOver ? "ring-2 ring-primary bg-primary/5" : ""
-      }`}
+      className={`rounded-xl p-4 h-[calc(100vh-200px)] overflow-y-auto 
+        bg-background/25 shadow-lg backdrop-blur-md border border-white/10
+        ${isOver ? "ring-2 ring-primary bg-primary/10" : ""}`}
     >
-      <h3 className="font-semibold text-lg mb-4 sticky top-0 bg-card py-2 z-10 border-b border-border/50 pb-2">
-        {title} ({tasks.length})
+      <h3 className="font-semibold text-lg mb-4 sticky top-0 py-2 z-10 
+        bg-background/30 backdrop-blur-lg border-b border-white/10 pb-2 
+        text-white flex items-center justify-between">
+        <span>{title}</span>
+        <span className="text-sm px-2 py-0.5 bg-white/10 rounded-full">
+          {tasks.length}
+        </span>
       </h3>
       
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         <div className="space-y-3">
           {tasks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground italic">
+            <div className="text-center py-8 text-gray-400 italic bg-white/5 
+              rounded-lg border border-white/5 backdrop-blur-sm p-4">
               No tasks in this column
             </div>
           ) : (
             tasks.map((task) => (
-              <TaskCard key={task.$id} task={task} onDelete={onDeleteTask} />
+              <TaskCard
+                key={task.$id}
+                task={task}
+                onDelete={onDeleteTask}
+                onEdit={onEditTask}
+                isOwner={isOwner}
+              />
             ))
           )}
         </div>
       </SortableContext>
     </div>
   );
-} 
+}

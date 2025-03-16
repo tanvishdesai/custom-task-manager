@@ -175,41 +175,45 @@ export default function Home() {
     return (
       <Card 
         key={project.$id} 
-        className="overflow-hidden border border-border/60 shadow-md transition-all duration-200 hover:shadow-lg hover:border-primary/30 relative"
+        className="overflow-hidden border border-border/40 bg-black/35 shadow-md transition-all duration-200 hover:shadow-lg hover:border-primary/30 relative backdrop-blur-sm"
       >
         {/* Not started tasks badge */}
         {project.$id && projectTaskCounts[project.$id]?.notStarted > 0 && (
-          <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full w-10 h-8 flex items-center justify-center text-xs font-bold shadow-lg z-20 border border-background/80">
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold shadow-lg z-20">
             {projectTaskCounts[project.$id]?.notStarted}
           </div>
         )}
         
-        {isAssigned && (
-          <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-full z-20">
-            Assigned
-          </div>
-        )}
+
         
-        <CardHeader className="pb-3 border-b border-border/30">
-          <CardTitle className="text-lg font-bold">{project.name}</CardTitle>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-bold text-white">{project.name}</CardTitle>
           {project.description && (
-            <CardDescription>{project.description}</CardDescription>
+            <CardDescription className="text-gray-300">{project.description}</CardDescription>
           )}
         </CardHeader>
-        <CardContent className="pt-4 pb-3">
-          <div className="flex justify-between text-sm">
+        <CardContent className="pt-1 pb-3">
+          <div className="flex justify-between text-sm text-gray-400">
             <span>Created: {new Date(project.createdAt).toLocaleDateString()}</span>
             {project.$id && (
               <span>Tasks: {projectTaskCounts[project.$id]?.total || 0}</span>
             )}
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between pt-2 border-t border-border/30">
-          <Button variant="outline" onClick={() => handleProjectClick(project.$id!)}>
+        <CardFooter className="flex justify-center pt-2 pb-4">
+          <Button 
+            variant="outline" 
+            onClick={() => handleProjectClick(project.$id!)}
+            className="w-24 border-gray-700 hover:bg-primary/20 text-white"
+          >
             Open
           </Button>
           {!isAssigned && (
-            <Button variant="destructive" onClick={() => handleDeleteProject(project.$id!)}>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDeleteProject(project.$id!)}
+              className="w-24 ml-2 bg-red-900/60 hover:bg-red-800"
+            >
               Delete
             </Button>
           )}
