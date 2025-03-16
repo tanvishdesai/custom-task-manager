@@ -50,13 +50,13 @@ const Navbar = () => {
               />
               <span className="ml-2 text-xl font-semibold">TaskMaster</span>
             </Link>
+          </div>
             
-            {/* Added quote text with proper styling for visibility */}
-            <div className="ml-6 hidden md:block">
-              <span className="text-sm text-foreground/70 italic font-light">
-                There is no nobility in mediocrity
-              </span>
-            </div>
+          {/* Centered quote with updated styling */}
+          <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2">
+            <span className="text-sm text-foreground/80 italic font-serif tracking-wide">
+              There is no nobility in Mediocrity
+            </span>
           </div>
 
           {/* Mobile Menu Toggle */}

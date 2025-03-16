@@ -189,9 +189,14 @@ export default function Home() {
       <section className="w-full py-12 md:py-24 lg:py-32 flex items-center justify-center">
         <div className="container px-4 md:px-6">
           <div className="flex flex-col items-center space-y-4 text-center">
-            <div className="space-y-2">
-              <div className="quote-text px-4 md:px-6 mb-16">
-                Two qualities are indispensable. First, is an intellect that even in the darkest hour retains some glimmering of inner light, which leads to truth. And second, the courage to follow that faint light wherever it may lead.
+            <div className="space-y-2 max-w-3xl mx-auto">
+              <div className="relative px-8 md:px-12 mb-16">
+                <div className="absolute top-0 left-0 text-6xl text-primary/30 font-Inter -translate-y-6">&quot;</div>
+                <p className="text-xl md:text-2xl medieval-quote leading-relaxed tracking-wide italic text-white drop-shadow-sm backdrop-blur-sm opacity-90">
+                  Two qualities are indispensable. First, is an intellect that even in the darkest hour retains some glimmering of inner light, which leads to truth. And second, the courage to follow that faint light wherever it may lead.
+                </p>
+                <div className="absolute bottom-0 right-0 text-6xl text-primary/30 font-serif translate-y-2">&quot;</div>
+                <div className="mt-6 w-16 h-1 bg-primary/60 mx-auto"></div>
               </div>
             </div>
           </div>

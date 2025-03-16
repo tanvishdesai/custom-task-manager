@@ -186,6 +186,7 @@
 
 /* Add custom quote font with optimized loading */
 @import url('https://fonts.googleapis.com/css2?family=Celandine&display=swap&text="Thereisnonobilityinmediocrity"');
+@import url('https://fonts.googleapis.com/css2?family=Medieval+Sharp:wght@400;500&display=swap');
 
 .quote-text {
   font-family: 'Celandine', serif;
@@ -196,6 +197,14 @@
   margin: 0 auto;
   text-align: center;
   letter-spacing: 0.5px;
+}
+
+/* Medieval quote styling */
+.medieval-quote {
+  font-family: 'Medieval Sharp', serif;
+  line-height: 1.8;
+  letter-spacing: 0.03em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Performance optimizations for transitions and animations */
