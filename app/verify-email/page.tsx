@@ -6,6 +6,7 @@ import { account } from "@/lib/appwrite";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getCurrentUser } from "@/lib/api";
 
 function VerifyEmailContent() {
     const [_isVerifying, setIsVerifying] = useState<boolean>(true);
@@ -28,17 +29,22 @@ function VerifyEmailContent() {
 
                 console.log("Starting verification process with userId:", userId);
 
-                // For Magic URL verification, we only need to create the session
                 try {
-                    await account.updateMagicURLSession(userId, secret);
-                    console.log("Magic URL verification successful");
+                    // Create a session with the magic URL
+                    const session = await account.updateMagicURLSession(userId, secret);
+                    console.log("Magic URL verification successful, session created:", session);
+                    
+                    // Verify that we have a valid user session
+                    const currentUser = await getCurrentUser();
+                    if (!currentUser) {
+                        throw new Error("Failed to create user session");
+                    }
+                    
                     setVerificationStatus("success");
                     toast.success("Email verified successfully!");
                     
-                    // Redirect to dashboard after a short delay
-                    setTimeout(() => {
-                        router.push("/");
-                    }, 2000);
+                    // Redirect to dashboard immediately
+                    router.push("/");
                 } catch (verificationError: unknown) {
                     // Safely log error details with fallbacks
                     console.error("Verification error details:", {
@@ -103,10 +109,10 @@ function VerifyEmailContent() {
                             <div className="space-y-4">
                                 <p>We could not verify your email. The link may be invalid or expired.</p>
                                 <Button 
-                                    onClick={() => router.push("/")}
+                                    onClick={() => router.push("/sign-in")}
                                     className="w-full"
                                 >
-                                    Go to Home Page
+                                    Go to Sign In
                                 </Button>
                             </div>
                         )}
