@@ -68,7 +68,7 @@ export const createMagicURLToken = async (email: string) => {
         const result = await account.createMagicURLToken(
             ID.unique(),
             email,
-            `${window.location.origin}/verify-email`
+            `${window.location.origin}/verify-email?email=${encodeURIComponent(email)}`
         );
         return result;
     } catch (error) {

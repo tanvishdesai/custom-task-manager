@@ -114,12 +114,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     setIsAuthenticated(true);
                     // Load notifications after authenticating
                     await loadNotifications();
+                    
+                    // Check if we're on the verification page, if so redirect to dashboard
+                    if (typeof window !== 'undefined') {
+                        const emailVerified = localStorage.getItem('emailVerified');
+                        if (window.location.pathname === '/verify-email' || emailVerified === 'true') {
+                            localStorage.removeItem('emailVerified'); // Clear the flag
+                            
+                            // Add a small delay to ensure the session is fully established
+                            setTimeout(() => {
+                                router.push('/');
+                            }, 500);
+                        }
+                    }
                 } else {
                     setUser(null);
                     setIsAuthenticated(false);
+                    
+                    // Check if coming from email verification
+                    if (typeof window !== 'undefined') {
+                        const currentPathname = window.location.pathname;
+                        // If user is coming from verification page and isn't logged in
+                        if (currentPathname === '/' && localStorage.getItem('emailVerified') === 'true') {
+                            localStorage.removeItem('emailVerified');
+                            // Redirect to sign in since they need to log in
+                            router.push('/sign-in?verified=true');
+                        }
+                    }
                 }
-            } catch {
-                // We won't log any errors here since getCurrentUser already handles that
+            } catch (error) {
+                console.error("Auth check error:", error);
                 setUser(null);
                 setIsAuthenticated(false);
             } finally {
@@ -128,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
 
         checkAuth();
-    }, []);
+    }, [router]);
 
     // Add a listener for when the route changes to refresh notifications
     useEffect(() => {
@@ -156,10 +180,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             if (session) {
                 const currentUser = await getCurrentUser();
-                setUser(currentUser);
-                setIsAuthenticated(true);
-                await loadNotifications();
-                router.push('/');
+                if (currentUser) {
+                    setUser(currentUser);
+                    setIsAuthenticated(true);
+                    await loadNotifications();
+                    router.push('/');
+                } else {
+                    throw new Error("Failed to get user after login");
+                }
             }
         } catch (error) {
             console.error("Login error:", error);

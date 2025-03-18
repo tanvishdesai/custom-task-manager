@@ -6,11 +6,12 @@ import { account } from "@/lib/appwrite";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { getCurrentUser } from "@/lib/api";
+import { createMagicURLToken, signOut } from "@/lib/api";
 
 function VerifyEmailContent() {
     const [_isVerifying, setIsVerifying] = useState<boolean>(true);
     const [verificationStatus, setVerificationStatus] = useState<"verifying" | "success" | "error">("verifying");
+    const [userEmail, setUserEmail] = useState<string>("");
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -19,6 +20,11 @@ function VerifyEmailContent() {
             try {
                 const userId = searchParams.get("userId");
                 const secret = searchParams.get("secret");
+                const emailParam = searchParams.get("email");
+                
+                if (emailParam) {
+                    setUserEmail(emailParam);
+                }
 
                 if (!userId || !secret) {
                     console.error("Missing userId or secret in URL parameters");
@@ -34,17 +40,29 @@ function VerifyEmailContent() {
                     const session = await account.updateMagicURLSession(userId, secret);
                     console.log("Magic URL verification successful, session created:", session);
                     
-                    // Verify that we have a valid user session
-                    const currentUser = await getCurrentUser();
-                    if (!currentUser) {
-                        throw new Error("Failed to create user session");
+                    // We don't need to call updateVerification as it's causing 401 errors
+                    // The magic URL session itself verifies the email
+                    
+                    // Sign out immediately to prevent session conflicts
+                    try {
+                        await signOut();
+                        console.log("Successfully signed out after verification");
+                    } catch (signOutError) {
+                        console.error("Error signing out after verification:", signOutError);
+                        // Continue anyway as we want to direct to sign-in
                     }
-                    
+
+                    // Set success status
                     setVerificationStatus("success");
-                    toast.success("Email verified successfully!");
+                    toast.success("Email verified successfully! Please sign in to continue.");
                     
-                    // Redirect to dashboard immediately
-                    router.push("/");
+                    // Store verification state for the sign-in page
+                    localStorage.setItem('emailVerified', 'true');
+                    
+                    // Redirect to sign-in page after a delay
+                    setTimeout(() => {
+                        router.push("/sign-in?verified=true");
+                    }, 1500);
                 } catch (verificationError: unknown) {
                     // Safely log error details with fallbacks
                     console.error("Verification error details:", {
@@ -73,6 +91,21 @@ function VerifyEmailContent() {
         verifyEmail();
     }, [searchParams, router]);
 
+    const handleResendVerification = async () => {
+        if (!userEmail) {
+            toast.error("Email address is missing. Please try signing up again.");
+            return;
+        }
+        
+        try {
+            await createMagicURLToken(userEmail);
+            toast.success("Verification email has been resent. Please check your inbox.");
+        } catch (error) {
+            console.error("Error resending verification email:", error);
+            toast.error("Failed to resend verification email. Please try signing up again.");
+        }
+    };
+
     return (
         <div className="flex min-h-screen items-center justify-center px-4 py-12 relative overflow-hidden">
             {/* Background blob */}
@@ -95,12 +128,12 @@ function VerifyEmailContent() {
                         
                         {verificationStatus === "success" && (
                             <div className="space-y-4">
-                                <p>Your email has been verified successfully. You will be redirected to the dashboard.</p>
+                                <p>Your email has been verified successfully. You will be redirected to the sign-in page in a moment.</p>
                                 <Button 
-                                    onClick={() => router.push("/")}
+                                    onClick={() => router.push("/sign-in?verified=true")}
                                     className="w-full"
                                 >
-                                    Go to Dashboard
+                                    Go to Sign In Now
                                 </Button>
                             </div>
                         )}
@@ -109,11 +142,20 @@ function VerifyEmailContent() {
                             <div className="space-y-4">
                                 <p>We could not verify your email. The link may be invalid or expired.</p>
                                 <Button 
-                                    onClick={() => router.push("/sign-in")}
+                                    onClick={handleResendVerification}
                                     className="w-full"
                                 >
-                                    Go to Sign In
+                                    Resend Verification Email
                                 </Button>
+                                <div className="pt-2">
+                                    <Button 
+                                        variant="outline"
+                                        onClick={() => router.push("/sign-up")}
+                                        className="w-full"
+                                    >
+                                        Back to Sign Up
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>
