@@ -86,10 +86,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     fetchProjectAndTasks();
   }, [unwrappedParams.id, router, user]);
 
+  // Define getTasksByStatus before using it in useMemo
+  const getTasksByStatus = useCallback((status: TaskStatus) => {
+    return tasks.filter((task) => task.status === status);
+  }, [tasks]);
+
   // Use useMemo for derived states
-  const todoTasks = useMemo(() => getTasksByStatus(TaskStatus.NOT_STARTED), [tasks]);
-  const inProgressTasks = useMemo(() => getTasksByStatus(TaskStatus.ONGOING), [tasks]);
-  const completedTasks = useMemo(() => getTasksByStatus(TaskStatus.COMPLETED), [tasks]);
+  const todoTasks = useMemo(() => getTasksByStatus(TaskStatus.NOT_STARTED), [tasks, getTasksByStatus]);
+  const inProgressTasks = useMemo(() => getTasksByStatus(TaskStatus.ONGOING), [tasks, getTasksByStatus]);
+  const completedTasks = useMemo(() => getTasksByStatus(TaskStatus.COMPLETED), [tasks, getTasksByStatus]);
   
   // Use useCallback for event handlers
   const handleCreateTask = useCallback(async (e: React.FormEvent) => {
@@ -224,10 +229,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     
     setActiveTask(null);
   }, [isOwner, tasks, startTransition]);
-
-  const getTasksByStatus = useCallback((status: TaskStatus) => {
-    return tasks.filter((task) => task.status === status);
-  }, [tasks]);
 
   const handleAssigneeInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const newValue = e.target.value;
