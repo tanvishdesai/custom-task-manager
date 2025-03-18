@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     })
   );
 
-  
+  const [_isPending, startTransition] = useTransition();
 
   useEffect(() => {
     const fetchProjectAndTasks = async () => {
@@ -86,7 +86,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     fetchProjectAndTasks();
   }, [unwrappedParams.id, router, user]);
 
-  const handleCreateTask = async (e: React.FormEvent) => {
+  // Use useMemo for derived states
+  const todoTasks = useMemo(() => getTasksByStatus(TaskStatus.NOT_STARTED), [tasks]);
+  const inProgressTasks = useMemo(() => getTasksByStatus(TaskStatus.ONGOING), [tasks]);
+  const completedTasks = useMemo(() => getTasksByStatus(TaskStatus.COMPLETED), [tasks]);
+  
+  // Use useCallback for event handlers
+  const handleCreateTask = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newTask.title.trim()) {
@@ -136,9 +142,9 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     } finally {
       setIsCreating(false);
     }
-  };
+  }, [newTask, unwrappedParams.id]);
 
-  const handleDeleteTask = async (taskId: string) => {
+  const handleDeleteTask = useCallback(async (taskId: string) => {
     try {
       // Only allow task deletion if the user is the project owner
       if (!isOwner) {
@@ -153,18 +159,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       console.error("Error deleting task:", error);
       toast.error("Failed to delete task");
     }
-  };
+  }, [isOwner]);
 
-  const handleDragStart = (event: DragStartEvent) => {
+  const handleDragStart = useCallback((event: DragStartEvent) => {
     const { active } = event;
     const draggedTask = tasks.find((task) => task.$id === active.id);
     
     if (draggedTask) {
       setActiveTask(draggedTask);
     }
-  };
+  }, [tasks]);
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over) return;
@@ -184,30 +190,44 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             return;
           }
           
+          // Optimistically update UI before server responds
+          startTransition(() => {
+            setTasks((prev) =>
+              prev.map((task) =>
+                task.$id === activeTaskId
+                  ? { ...task, status: overContainerId }
+                  : task
+              )
+            );
+          });
+          
+          // Then update server
           const _updatedTask = await updateTaskStatus(activeTaskId, overContainerId);
-          
-          setTasks((prev) =>
-            prev.map((task) =>
-              task.$id === activeTaskId
-                ? { ...task, status: overContainerId }
-                : task
-            )
-          );
-          
           toast.success(`Task moved to ${overContainerId.replace('_', ' ')}`);
         } catch (err) {
           console.error("Error updating task status:", err);
           toast.error("Failed to update task status");
+          
+          // Revert optimistic update on failure
+          startTransition(() => {
+            setTasks((prev) =>
+              prev.map((task) =>
+                task.$id === activeTaskId
+                  ? { ...task, status: taskToUpdate.status }
+                  : task
+              )
+            );
+          });
         }
       }
     }
     
     setActiveTask(null);
-  };
+  }, [isOwner, tasks, startTransition]);
 
-  const getTasksByStatus = (status: TaskStatus) => {
+  const getTasksByStatus = useCallback((status: TaskStatus) => {
     return tasks.filter((task) => task.status === status);
-  };
+  }, [tasks]);
 
   const handleAssigneeInputChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     const newValue = e.target.value;
@@ -453,7 +473,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <TaskColumn 
                 title="Not Started" 
-                tasks={getTasksByStatus(TaskStatus.NOT_STARTED)} 
+                tasks={todoTasks} 
                 status={TaskStatus.NOT_STARTED}
                 onDeleteTask={handleDeleteTask}
                 onEditTask={handleEditTask}
@@ -461,7 +481,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               />
               <TaskColumn 
                 title="Ongoing" 
-                tasks={getTasksByStatus(TaskStatus.ONGOING)} 
+                tasks={inProgressTasks} 
                 status={TaskStatus.ONGOING}
                 onDeleteTask={handleDeleteTask}
                 onEditTask={handleEditTask}
@@ -469,7 +489,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               />
               <TaskColumn 
                 title="Completed" 
-                tasks={getTasksByStatus(TaskStatus.COMPLETED)} 
+                tasks={completedTasks} 
                 status={TaskStatus.COMPLETED}
                 onDeleteTask={handleDeleteTask}
                 onEditTask={handleEditTask}

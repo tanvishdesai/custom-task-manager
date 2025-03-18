@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Task, TaskPriority } from "@/lib/types";
@@ -40,7 +41,7 @@ interface TaskCardProps {
   isOwner?: boolean;
 }
 
-export default function TaskCard({ task, onDelete, onEdit, isOwner = true }: TaskCardProps) {
+function TaskCard({ task, onDelete, onEdit, isOwner = true }: TaskCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -356,4 +357,6 @@ export default function TaskCard({ task, onDelete, onEdit, isOwner = true }: Tas
       </Dialog>
     </>
   );
-} 
+}
+
+export default React.memo(TaskCard); 

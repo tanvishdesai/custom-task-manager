@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Task, TaskStatus } from "@/lib/types";
@@ -14,7 +15,7 @@ interface TaskColumnProps {
   isOwner?: boolean;
 }
 
-export default function TaskColumn({
+function TaskColumn({
   title,
   tasks,
   status,
@@ -26,7 +27,8 @@ export default function TaskColumn({
     id: status,
   });
 
-  const taskIds = tasks.map((task) => task.$id!);
+  // Memoize taskIds to prevent unnecessary re-renders
+  const taskIds = useMemo(() => tasks.map((task) => task.$id!), [tasks]);
 
   return (
     <div
@@ -67,3 +69,5 @@ export default function TaskColumn({
     </div>
   );
 }
+
+export default React.memo(TaskColumn);
